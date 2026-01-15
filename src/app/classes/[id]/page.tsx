@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Correct hook for App Router params? Actually uses useParams in client components
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import CreditBalance from '@/components/CreditBalance';
 import { useSession } from 'next-auth/react';
+import { ArrowLeft, Lock, Play, Clock, Share2, AlertCircle } from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import { motion } from 'framer-motion';
 
 export default function ClassDetailPage() {
     const { id } = useParams();
@@ -18,23 +22,13 @@ export default function ClassDetailPage() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [userCredits, setUserCredits] = useState<number>(0);
+    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
     useEffect(() => {
-        // Determine if we have the class data from a previous list fetch or need to fetch individual?
-        // For simplicity, let's fetch individual if the API supports it, or filter from list
-        // Ideally we need a GET /api/classes/[id] endpoint. 
-        // Since I implemented GET /api/classes listing, let's just stick to the listing endpoint and filter client side 
-        // OR quickly add the backend logic. 
-        // Actually, listing endpoint returns all, let's just filter client side for MVP or fetch all.
-        // BETTER: Let's fetch the specific class. I need to make sure the API supports it or just fetch all and find.
-        // My previous API route was /api/classes with department filter.
-        // I should create a specific GET /api/classes/[id] implementation or just use the list for now to save time if the list is small.
-        // But for correct arch, I will quickly fetch all and filter client side for this demo.
-
-        // Fetch user credits for validation
+        // Fetch user credits
         fetch('/api/users').then(r => r.json()).then(d => setUserCredits(d.user?.credits || 0));
 
-        // Fetch class
+        // Fetch class details (simulated by finding in list for now as per previous logic)
         fetch('/api/classes').then(r => r.json()).then(data => {
             const found = data.classes.find((c: any) => c._id === id);
             setClassItem(found);
@@ -44,59 +38,57 @@ export default function ClassDetailPage() {
 
     const handlePurchase = async () => {
         if (!session) return;
+        setPurchasing(true);
+        setError('');
 
-        // Client side validation
-        if (userCredits < classItem.price) {
-            setError(`Insufficient credits! You need ${classItem.price - userCredits} more.`);
-            return;
-        }
+        try {
+            const res = await fetch(`/api/classes/${id}/purchase`, {
+                method: 'POST',
+            });
+            const data = await res.json();
 
-        if (confirm(`Are you sure you want to purchase "${classItem.title}" for ${classItem.price} credits?`)) {
-            setPurchasing(true);
-            setError('');
+            if (!res.ok) throw new Error(data.error);
 
-            try {
-                const res = await fetch(`/api/classes/${id}/purchase`, {
-                    method: 'POST',
-                });
-                const data = await res.json();
+            setSuccess('Purchase successful! Unlocking content...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
 
-                if (!res.ok) throw new Error(data.error);
-
-                setSuccess('Purchase successful! Unlocking video...');
-
-                // Refresh class data to show video
-                // In a real app we'd re-fetch just this class.
-                // Here we just reload the page or update local state
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-
-            } catch (err: any) {
-                setError(err.message);
-                setPurchasing(false);
-            }
+        } catch (err: any) {
+            setError(err.message);
+            setPurchasing(false);
+            setIsPurchaseModalOpen(false); // Close on error to show error msg
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+    );
 
-    if (!classItem) return <div className="p-8 text-center">Class not found</div>;
+    if (!classItem) return <div className="p-8 text-center text-white">Class not found</div>;
 
     const isOwner = session?.user?.id === classItem.instructorId._id;
     const isPurchased = classItem.purchasedBy.includes(session?.user?.id);
     const canView = isOwner || isPurchased;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
-            <div className="container max-w-4xl mx-auto">
-                <Link href="/classes/attend" className="text-muted hover:underline mb-4 inline-block">&larr; Back to Browse</Link>
+        <div className="min-h-screen py-12 px-4 pb-20">
+            <div className="container max-w-6xl mx-auto">
+                <Link
+                    href="/classes/attend"
+                    className="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-6 gap-2"
+                >
+                    <ArrowLeft size={16} />
+                    Back to Browse
+                </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="card overflow-hidden p-0">
-                            <div className="aspect-video bg-black relative flex items-center justify-center">
+                        <Card variant="solid" className="p-0 overflow-hidden border-indigo-500/20 bg-black/40">
+                            <div className="aspect-video bg-black relative flex items-center justify-center group">
                                 {canView ? (
                                     <video
                                         src={classItem.videoUrl}
@@ -105,73 +97,168 @@ export default function ClassDetailPage() {
                                         poster={classItem.thumbnailUrl}
                                     />
                                 ) : (
-                                    <div className="text-center p-8 text-white">
-                                        <div className="text-6xl mb-4">🔒</div>
-                                        <h2 className="text-xl font-bold mb-2">Locked Content</h2>
-                                        <p className="opacity-80">Purchase this class to watch the video</p>
-                                    </div>
+                                    <>
+                                        {/* Blurred Background if available, else Gradient */}
+                                        {classItem.thumbnailUrl ? (
+                                            <img src={classItem.thumbnailUrl} alt="Locked" className="absolute inset-0 w-full h-full object-cover blur-sm opacity-50" />
+                                        ) : (
+                                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 to-purple-900/40" />
+                                        )}
+
+                                        <div className="relative z-10 text-center p-8">
+                                            <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-6 ring-1 ring-white/20 shadow-2xl">
+                                                <Lock className="w-8 h-8 text-white" />
+                                            </div>
+                                            <h2 className="text-2xl font-bold text-white mb-2">Premium Content</h2>
+                                            <p className="text-gray-300 mb-6 max-w-md mx-auto">
+                                                Unlock this masterclass to access the full video lessons and resources.
+                                            </p>
+                                            <Button
+                                                onClick={() => setIsPurchaseModalOpen(true)}
+                                                className="shadow-xl"
+                                            >
+                                                Unlock for {classItem.price} Credits
+                                            </Button>
+                                        </div>
+                                    </>
                                 )}
                             </div>
-                            <div className="p-6">
-                                <div className="flex justify-between items-start">
-                                    <h1 className="heading-2 mb-2">{classItem.title}</h1>
-                                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800">
-                                        {classItem.department}
-                                    </span>
-                                </div>
+                        </Card>
 
-                                <p className="text-muted whitespace-pre-wrap">{classItem.description}</p>
+                        <div className="space-y-4">
+                            <h1 className="text-3xl font-bold text-white tracking-tight">{classItem.title}</h1>
+                            <div className="flex items-center gap-3 text-sm">
+                                <Badge variant="info">{classItem.department}</Badge>
+                                <span className="text-gray-400">•</span>
+                                <span className="text-gray-400 flex items-center gap-1">
+                                    <Clock size={14} /> Created recently
+                                </span>
                             </div>
+                            <Card variant="glass" className="p-6 backdrop-blur-md">
+                                <h3 className="text-lg font-semibold text-white mb-3">About this class</h3>
+                                <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                    {classItem.description}
+                                </p>
+                            </Card>
                         </div>
                     </div>
 
                     {/* Sidebar */}
                     <div className="space-y-6">
-                        <div className="card">
-                            <h3 className="text-lg font-bold mb-4 border-b pb-2">Class Details</h3>
+                        <Card variant="glass" className="p-6 backdrop-blur-xl border-t-4 border-t-indigo-500">
+                            <h3 className="text-lg font-bold text-white mb-6 flex items-center justify-between">
+                                Instructor
+                                <Share2 className="text-gray-500 hover:text-white cursor-pointer transition-colors" size={18} />
+                            </h3>
 
-                            <div className="flex justify-between items-center mb-4">
-                                <span className="text-muted">Instructor</span>
-                                <div className="font-medium flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">
-                                        {classItem.instructorId.name?.[0]}
-                                    </div>
-                                    {classItem.instructorId.name}
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-lg font-bold text-white ring-2 ring-indigo-500/30">
+                                    {classItem.instructorId.name?.[0]}
+                                </div>
+                                <div>
+                                    <p className="text-white font-medium">{classItem.instructorId.name}</p>
+                                    <p className="text-xs text-indigo-300">{classItem.instructorId.department}</p>
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center mb-6">
-                                <span className="text-muted">Price</span>
-                                <div className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
-                                    {classItem.price} Credits
-                                </div>
+                            <div className="h-px bg-white/10 my-6" />
+
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-gray-400">Price</span>
+                                <span className="text-2xl font-bold text-white flex items-center gap-1">
+                                    {classItem.price} <span className="text-base font-normal text-gray-500">Credits</span>
+                                </span>
                             </div>
 
-                            {error && <div className="bg-red-50 text-red-600 p-2 text-sm rounded mb-4">{error}</div>}
-                            {success && <div className="bg-green-50 text-green-600 p-2 text-sm rounded mb-4">{success}</div>}
+                            {/* Status Messages */}
+                            {error && (
+                                <div className="bg-red-500/10 text-red-300 p-3 rounded-lg mb-4 text-sm border border-red-500/20 flex items-start gap-2">
+                                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                                    {error}
+                                </div>
+                            )}
+                            {success && (
+                                <div className="bg-green-500/10 text-green-300 p-3 rounded-lg mb-4 text-sm border border-green-500/20">
+                                    {success}
+                                </div>
+                            )}
 
+                            {/* Action Button */}
                             {canView ? (
-                                <button disabled className="btn w-full bg-green-100 text-green-700 border border-green-200 cursor-default">
-                                    {isOwner ? 'You Teach This' : '✅ You Own This Class'}
-                                </button>
+                                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-center">
+                                    <p className="text-green-400 font-medium">
+                                        {isOwner ? '🎓 You teach this class' : '✅ You own this class'}
+                                    </p>
+                                </div>
                             ) : (
-                                <button
-                                    onClick={handlePurchase}
-                                    disabled={purchasing}
-                                    className={`btn btn-primary w-full ${purchasing ? 'opacity-70' : ''}`}
+                                <Button
+                                    onClick={() => setIsPurchaseModalOpen(true)}
+                                    className="w-full"
+                                    size="lg"
                                 >
-                                    {purchasing ? 'Processing...' : `Purchase for ${classItem.price} Credits`}
-                                </button>
+                                    Purchase Access
+                                </Button>
                             )}
 
                             {!canView && (
-                                <p className="text-xs text-center mt-3 text-muted">
-                                    Your current balance: <strong>{userCredits} Credits</strong>
+                                <p className="text-xs text-center mt-3 text-gray-500">
+                                    One-time payment. Lifetime access.
                                 </p>
                             )}
-                        </div>
+                        </Card>
                     </div>
                 </div>
+
+                {/* Purchase Confirmation Modal */}
+                <Modal
+                    isOpen={isPurchaseModalOpen}
+                    onClose={() => setIsPurchaseModalOpen(false)}
+                    title="Confirm Purchase"
+                    footer={
+                        <>
+                            <Button variant="ghost" onClick={() => setIsPurchaseModalOpen(false)}>Cancel</Button>
+                            <Button
+                                onClick={handlePurchase}
+                                isLoading={purchasing}
+                                disabled={userCredits < classItem.price}
+                            >
+                                Confirm Purchase
+                            </Button>
+                        </>
+                    }
+                >
+                    <div className="space-y-4">
+                        <p className="text-gray-300">
+                            Are you sure you want to purchase <strong>"{classItem.title}"</strong>?
+                        </p>
+
+                        <div className="bg-white/5 p-4 rounded-xl space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Current Balance</span>
+                                <span className="text-white font-medium">{userCredits} Credits</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-red-400">
+                                <span>Cost</span>
+                                <span>- {classItem.price} Credits</span>
+                            </div>
+                            <div className="h-px bg-white/10" />
+                            <div className="flex justify-between font-medium">
+                                <span className={userCredits < classItem.price ? "text-red-400" : "text-green-400"}>
+                                    Remaining
+                                </span>
+                                <span className={userCredits < classItem.price ? "text-red-400" : "text-green-400"}>
+                                    {userCredits - classItem.price} Credits
+                                </span>
+                            </div>
+                        </div>
+
+                        {userCredits < classItem.price && (
+                            <div className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+                                Insufficient funds. You need {classItem.price - userCredits} more credits.
+                            </div>
+                        )}
+                    </div>
+                </Modal>
             </div>
         </div>
     );

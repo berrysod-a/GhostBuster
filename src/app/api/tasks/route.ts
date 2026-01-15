@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/db';
 import Task from '@/models/Task';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export async function POST(request: Request) {
     try {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
             title,
             description,
             price: Number(price),
-            creatorId: session.user.id,
+            creatorId: new mongoose.Types.ObjectId(session.user.id),
             status: 'open',
         });
 

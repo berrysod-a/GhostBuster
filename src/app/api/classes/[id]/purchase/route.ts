@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import type { Session } from 'next-auth'; // Import Session type
-import { authOptions } from '../../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/db';
 import Class from '@/models/Class';
 import User from '@/models/User';
@@ -37,7 +37,7 @@ export async function POST(
             }
 
             // Check if already purchased
-            if (classItem.purchasedBy.includes(userId)) {
+            if (classItem.purchasedBy.some(id => id.toString() === userId)) {
                 throw new Error('You have already purchased this class');
             }
 

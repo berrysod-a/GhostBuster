@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/db';
 import Task from '@/models/Task';
+import mongoose from 'mongoose';
 
 // Apply for a task
 export async function POST(
@@ -33,7 +34,7 @@ export async function POST(
         }
 
         // Assign the task
-        task.assigneeId = session.user.id;
+        task.assigneeId = new mongoose.Types.ObjectId(session.user.id);
         task.status = 'in_progress';
         await task.save();
 

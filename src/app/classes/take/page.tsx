@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Video, UploadCloud } from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import Select from '@/components/ui/Select';
+import Button from '@/components/ui/Button';
 
 export default function TakeClassPage() {
     const router = useRouter();
@@ -39,13 +45,11 @@ export default function TakeClassPage() {
         }
 
         try {
-            // 1. Convert video to base64 (for simple demo upload - prod would use signed URL)
             const reader = new FileReader();
             reader.readAsDataURL(videoFile);
 
             reader.onloadend = async () => {
                 const videoData = reader.result;
-
                 try {
                     const res = await fetch('/api/classes', {
                         method: 'POST',
@@ -57,7 +61,6 @@ export default function TakeClassPage() {
                     });
 
                     const data = await res.json();
-
                     if (!res.ok) throw new Error(data.error || 'Failed to create class');
 
                     setSuccess(true);
@@ -70,7 +73,6 @@ export default function TakeClassPage() {
                     setLoading(false);
                 }
             };
-
         } catch (err: any) {
             setError('Error processing file');
             setLoading(false);
@@ -79,72 +81,123 @@ export default function TakeClassPage() {
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-green-50 dark:bg-green-900/20">
-                <div className="card max-w-md text-center p-8">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="heading-2 text-green-600">Class Uploaded!</h2>
-                    <p className="text-muted mb-4">Your class "{formData.title}" is live.</p>
-                    <p className="font-medium">You will earn <span className="text-primary">{formData.price} credits</span> every time someone attends!</p>
-                    <p className="text-sm text-muted mt-6">Redirecting to menu...</p>
-                </div>
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="max-w-md w-full text-center p-8 bg-green-500/10 border-green-500/20">
+                    <div className="text-6xl mb-4 animate-bounce">🎉</div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Class Uploaded!</h2>
+                    <p className="text-gray-300 mb-4">Your class "{formData.title}" is live.</p>
+                    <p className="font-medium text-green-400">You will earn {formData.price} credits every time someone attends!</p>
+                    <p className="text-sm text-gray-500 mt-6 animate-pulse">Redirecting to menu...</p>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4">
-            <div className="container max-w-2xl mx-auto">
-                <Link href="/classes" className="text-muted hover:text-foreground mb-4 inline-block">&larr; Back to Classes</Link>
-                <div className="card glass">
-                    <h1 className="heading-2 mb-2">Upload a Class 📹</h1>
-                    <p className="text-muted mb-6">Share your knowledge and earn credits from other students.</p>
+        <div className="min-h-screen py-12 px-4">
+            <div className="container max-w-3xl mx-auto">
+                <Link
+                    href="/classes"
+                    className="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-6 gap-2"
+                >
+                    <ArrowLeft size={16} />
+                    Back to Classes
+                </Link>
 
-                    {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Class Title</label>
-                            <input name="title" type="text" className="input" placeholder="e.g. Intro to React" value={formData.title} onChange={handleChange} required />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Description</label>
-                            <textarea name="description" className="input min-h-[100px]" placeholder="What will students learn?" value={formData.description} onChange={handleChange} required />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Department</label>
-                                <select name="department" className="input" value={formData.department} onChange={handleChange} required>
-                                    <option value="">Select...</option>
-                                    <option value="Computer Science">Computer Science</option>
-                                    <option value="Information Technology">Information Technology</option>
-                                    <option value="Electronics">Electronics</option>
-                                    <option value="Mechanical">Mechanical</option>
-                                    <option value="Civil">Civil</option>
-                                    <option value="Biotechnology">Biotechnology</option>
-                                    <option value="Others">Others</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Price (Credits)</label>
-                                <input name="price" type="number" min="0" className="input" placeholder="e.g. 5" value={formData.price} onChange={handleChange} required />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Video Upload</label>
-                            <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                <input type="file" accept="video/*" onChange={handleFileChange} className="w-full" required />
-                                <p className="text-xs text-muted mt-2">Max file size depends on Cloudinary plan</p>
-                            </div>
-                        </div>
-
-                        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-                            {loading ? 'Uploading Class...' : 'Publish Class'}
-                        </button>
-                    </form>
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                        <Video className="text-indigo-400" />
+                        Upload a Class
+                    </h1>
+                    <p className="text-gray-400">Share your knowledge and earn credits from other students.</p>
                 </div>
+
+                <Card variant="glass" className="p-8 backdrop-blur-xl">
+                    {error && (
+                        <div className="bg-red-500/10 text-red-300 p-4 rounded-xl mb-6 text-sm border border-red-500/20">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <Input
+                            label="Class Title"
+                            name="title"
+                            placeholder="e.g. Intro to Advanced React Patterns"
+                            value={formData.title}
+                            onChange={handleChange}
+                            required
+                        />
+
+                        <Textarea
+                            label="Description"
+                            name="description"
+                            placeholder="What will students learn in this class?"
+                            value={formData.description}
+                            onChange={handleChange}
+                            required
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Select
+                                label="Department"
+                                name="department"
+                                value={formData.department}
+                                onChange={handleChange}
+                                options={[
+                                    { label: 'Computer Science', value: 'Computer Science' },
+                                    { label: 'Information Technology', value: 'Information Technology' },
+                                    { label: 'Electronics', value: 'Electronics' },
+                                    { label: 'Mechanical', value: 'Mechanical' },
+                                    { label: 'Civil', value: 'Civil' },
+                                    { label: 'Biotechnology', value: 'Biotechnology' },
+                                    { label: 'Others', value: 'Others' },
+                                ]}
+                                required
+                            />
+
+                            <Input
+                                label="Price (Credits)"
+                                name="price"
+                                type="number"
+                                min="0"
+                                placeholder="e.g. 20"
+                                value={formData.price}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">Video Upload</label>
+                            <div className="border border-dashed border-white/20 rounded-xl p-8 text-center hover:bg-white/5 transition-colors group cursor-pointer relative">
+                                <input
+                                    type="file"
+                                    accept="video/*"
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    required
+                                />
+                                <div className="space-y-2 pointer-events-none">
+                                    <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-3 group-hover:bg-indigo-500/30 transition-colors">
+                                        <UploadCloud className="text-indigo-400 w-6 h-6" />
+                                    </div>
+                                    <p className="text-white font-medium">Click to upload or drag and drop</p>
+                                    <p className="text-sm text-gray-400">MP4, WebM or Ogg (Max 100MB)</p>
+                                    {videoFile && (
+                                        <div className="mt-4 p-2 bg-indigo-500/20 rounded text-indigo-300 text-sm font-medium">
+                                            Selected: {videoFile.name}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button type="submit" className="w-full" size="lg" isLoading={loading}>
+                            {loading ? 'Uploading Class...' : 'Publish Class'}
+                        </Button>
+                    </form>
+                </Card>
             </div>
         </div>
     );

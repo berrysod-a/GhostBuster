@@ -3,6 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, FilePlus, Coins } from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import Button from '@/components/ui/Button';
 
 export default function GiveTaskPage() {
     const router = useRouter();
@@ -32,7 +37,6 @@ export default function GiveTaskPage() {
             });
 
             const data = await res.json();
-
             if (!res.ok) throw new Error(data.error || 'Failed to create task');
 
             setSuccess(true);
@@ -42,56 +46,100 @@ export default function GiveTaskPage() {
 
         } catch (err: any) {
             setError(err.message);
-        } finally {
             setLoading(false);
         }
     };
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-green-50 dark:bg-green-900/20">
-                <div className="card max-w-md text-center p-8">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="heading-2 text-green-600">Task Posted!</h2>
-                    <p className="text-muted mb-4">Your task "{formData.title}" is now available.</p>
-                    <p className="text-sm text-muted mt-6">Redirecting to menu...</p>
-                </div>
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="max-w-md w-full text-center p-8 bg-emerald-500/10 border-emerald-500/20">
+                    <div className="text-6xl mb-4 animate-bounce">✨</div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Task Posted!</h2>
+                    <p className="text-gray-300 mb-4">Your task "{formData.title}" is now available to others.</p>
+                    <p className="font-medium text-emerald-400">Helpers will see a reward of {formData.price} credits.</p>
+                    <p className="text-sm text-gray-500 mt-6 animate-pulse">Redirecting to menu...</p>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4">
+        <div className="min-h-screen py-12 px-4">
             <div className="container max-w-2xl mx-auto">
-                <Link href="/tasks" className="text-muted hover:text-foreground mb-4 inline-block">&larr; Back to Tasks</Link>
-                <div className="card glass">
-                    <h1 className="heading-2 mb-2">Give a Task 📝</h1>
-                    <p className="text-muted mb-6">Describe what you need help with and set a reward.</p>
+                <Link
+                    href="/tasks"
+                    className="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-6 gap-2"
+                >
+                    <ArrowLeft size={16} />
+                    Back to Tasks
+                </Link>
 
-                    {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Task Title</label>
-                            <input name="title" type="text" className="input" placeholder="e.g. Help with Data Structures" value={formData.title} onChange={handleChange} required />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Description</label>
-                            <textarea name="description" className="input min-h-[100px]" placeholder="Detailed description of requirements..." value={formData.description} onChange={handleChange} required />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Reward (Credits)</label>
-                            <input name="price" type="number" min="1" className="input" placeholder="e.g. 10" value={formData.price} onChange={handleChange} required />
-                            <p className="text-xs text-muted mt-1">These credits will be deducted when you mark the task as completed.</p>
-                        </div>
-
-                        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-                            {loading ? 'Posting Task...' : 'Post Task'}
-                        </button>
-                    </form>
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                        <FilePlus className="text-emerald-400" />
+                        Give a Task
+                    </h1>
+                    <p className="text-gray-400">Describe what you need help with and set a reward.</p>
                 </div>
+
+                <Card variant="glass" className="p-8 backdrop-blur-xl border border-emerald-500/20">
+                    {error && (
+                        <div className="bg-red-500/10 text-red-300 p-4 rounded-xl mb-6 text-sm border border-red-500/20">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <Input
+                            label="Task Title"
+                            name="title"
+                            placeholder="e.g. Help needed with Data Structures Assignment"
+                            value={formData.title}
+                            onChange={handleChange}
+                            required
+                        />
+
+                        <Textarea
+                            label="Detailed Requirements"
+                            name="description"
+                            placeholder="Describe exactly what needs to be done. Include deadlines or specific constraints..."
+                            value={formData.description}
+                            onChange={handleChange}
+                            required
+                            className="min-h-[150px]"
+                        />
+
+                        <div className="bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/10">
+                            <div className="flex items-center gap-2 mb-4 text-emerald-400">
+                                <Coins size={20} />
+                                <span className="font-medium">Set Reward</span>
+                            </div>
+                            <Input
+                                name="price"
+                                type="number"
+                                min="1"
+                                placeholder="e.g. 50"
+                                value={formData.price}
+                                onChange={handleChange}
+                                required
+                                className="bg-black/20"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                                These credits will be deducted from your account only after you mark the task as completed.
+                            </p>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+                            size="lg"
+                            isLoading={loading}
+                        >
+                            {loading ? 'Posting...' : 'Post Task'}
+                        </Button>
+                    </form>
+                </Card>
             </div>
         </div>
     );

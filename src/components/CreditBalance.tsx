@@ -41,9 +41,9 @@ export default function CreditBalance({ initialCredits, refreshInterval }: Credi
     }
 
     return (
-        <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold shadow-md transform transition-transform hover:scale-105">
-            <span className="text-xl">🪙</span>
-            <span className="text-lg">{credits}</span>
+        <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-amber-500/30 backdrop-blur-md text-amber-300 px-4 py-1.5 rounded-full font-bold shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all hover:shadow-[0_0_25px_rgba(245,158,11,0.5)]">
+            <span className="text-xl drop-shadow-md">🪙</span>
+            <span className="text-lg bg-clip-text text-transparent bg-gradient-to-r from-amber-200 to-yellow-500">{credits}</span>
         </div>
     );
 }
